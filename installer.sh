@@ -422,7 +422,7 @@ EOF
 
 SERVERIP=$(get_external_ip)
 LOCALLANIP=$(get_ip)
-cd ${NODEHOME} &&
+
 touch ./.env
 cat >./.env <<EOL
 EXT_IP=${EXTERNALIP}
@@ -467,7 +467,7 @@ cat <<EOF
 
 EOF
 
-cd ${NODEHOME}
+
 if [[ "$(uname)" == "Darwin" ]]; then
   sed "s/- '8080:8080'/- '$DASHPORT:$DASHPORT'/" docker-compose.tmpl > docker-compose.yml
   sed -i '' "s/- '9001-9010:9001-9010'/- '$SHMEXT:$SHMEXT'/" docker-compose.yml
