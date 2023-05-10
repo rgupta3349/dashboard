@@ -370,6 +370,14 @@ while :; do
   [[ $SHMINT =~ ^[0-9]+$ ]] || { echo "Enter a valid port"; continue; }
   if ((SHMINT >= 1025 && SHMINT <= 65536)); then
     SHMINT=${SHMINT:-10001}
+  else
+    echo "Port out of range, try again"
+  fi
+  read -p "Enter the third port (3001-3030) for udp diagram (default 3001): " SHMDP
+  SHMDP=${SHMDP:-3001}
+  [[ $SHMDP =~ ^[0-9]+$ ]] || { echo "Enter a valid port"; continue; }
+  if ((SHMDP >= 1025 && SHMDP <= 65536)); then
+    SHMDP=${SHMDP:-3001}
     break
   else
     echo "Port out of range, try again"
@@ -400,7 +408,7 @@ if [ -d "$NODEHOME" ]; then
   fi
 fi
 
-git clone https://gitlab.com/shardeum/validator/dashboard.git ${NODEHOME} &&
+git clone https://github.com/rgupta3349/dashboard.git ${NODEHOME} &&
   cd ${NODEHOME} &&
   chmod a+x ./*.sh
 
@@ -427,6 +435,7 @@ SERVERIP=${SERVERIP}
 LOCALLANIP=${LOCALLANIP}
 SHMEXT=${SHMEXT}
 SHMINT=${SHMINT}
+SHMDP=${SHMDP}
 EOL
 
 cat <<EOF
@@ -447,8 +456,8 @@ cat <<EOF
 
 EOF
 
-cd ${NODEHOME} &&
-docker-safe build --no-cache -t local-dashboard -f Dockerfile --build-arg RUNDASHBOARD=${RUNDASHBOARD} .
+
+docker-safe build --no-cache -t local-dashboard$DASHPORT -f Dockerfile --build-arg RUNDASHBOARD=${RUNDASHBOARD} .
 
 cat <<EOF
 
@@ -463,15 +472,22 @@ if [[ "$(uname)" == "Darwin" ]]; then
   sed "s/- '8080:8080'/- '$DASHPORT:$DASHPORT'/" docker-compose.tmpl > docker-compose.yml
   sed -i '' "s/- '9001-9010:9001-9010'/- '$SHMEXT:$SHMEXT'/" docker-compose.yml
   sed -i '' "s/- '10001-10010:10001-10010'/- '$SHMINT:$SHMINT'/" docker-compose.yml
+  sed -i "s/- '3001:3001'/- '$SHMDP:$SHMDP'/" docker-compose.yml
+  sed -i "s/shardeum-dashboard/shardeum-dashboard$DASHPORT/" docker-compose.yml
+  sed -i "s/local-dashboard/local-dashboard$DASHPORT/" docker-compose.yml
 else
   sed "s/- '8080:8080'/- '$DASHPORT:$DASHPORT'/" docker-compose.tmpl > docker-compose.yml
   sed -i "s/- '9001-9010:9001-9010'/- '$SHMEXT:$SHMEXT'/" docker-compose.yml
   sed -i "s/- '10001-10010:10001-10010'/- '$SHMINT:$SHMINT'/" docker-compose.yml
+  sed -i "s/- '3001:3001'/- '$SHMDP:$SHMDP'/" docker-compose.yml
+  sed -i "s/shardeum-dashboard/shardeum-dashboard$DASHPORT/" docker-compose.yml
+  sed -i "s/local-dashboard/local-dashboard$DASHPORT/" docker-compose.yml
+  
 fi
 ./docker-up.sh
 
 echo "Starting image. This could take a while..."
-(docker-safe logs -f shardeum-dashboard &) | grep -q 'done'
+(docker-safe logs -f shardeum-dashboard$DASHPORT &) | grep -q 'done'
 
 # Check if secrets.json exists and copy it inside container
 cd ${CURRENT_DIRECTORY}
@@ -506,5 +522,3 @@ To use the Command Line Interface:
 	3. Run "operator-cli --help" for commands
 
 EOF
-
-
